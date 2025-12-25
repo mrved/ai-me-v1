@@ -994,7 +994,7 @@ def main():
                 display_df['max_deflection'] = display_df['max_deflection'].apply(lambda x: f"{x:.2e}")
                 st.dataframe(display_df, use_container_width=True, height=400)
 
-    if __name__ == "__main__":
+if __name__ == "__main__":
     try:
         main()
     except Exception as e:
