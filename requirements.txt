@@ -1,0 +1,11 @@
+numpy
+pandas
+scikit-learn
+pyvista
+meshio
+pytest
+joblib
+sqlalchemy
+streamlit
+plotly
+matplotlib

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  dashboard:
+    build: .
+    container_name: ai-engineering-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      # Persist data directory
+      - ./data:/app/data
+      # Persist model file
+      - ./model.pkl:/app/model.pkl
+      # Optional: persist Streamlit config
+      - ./.streamlit:/app/.streamlit
+    environment:
+      - DB_PATH=sqlite:///data/metadata.db
+      - MODEL_PATH=model.pkl
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: PostgreSQL for production use
+  # Uncomment if you want to use PostgreSQL instead of SQLite
+  # postgres:
+  #   image: postgres:14-alpine
+  #   container_name: ai-dashboard-db
+  #   environment:
+  #     POSTGRES_DB: engineering_db
+  #     POSTGRES_USER: admin
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
+
