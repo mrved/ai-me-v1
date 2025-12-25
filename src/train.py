@@ -54,8 +54,23 @@ def train_model():
     print(f"Loaded {len(df)} samples from database")
     
     # 2. Features (X) and Target (y)
-    # We want to predict max_stress based on geometry and load
-    X = df[['length', 'width', 'height', 'load']]
+    # Use all available parameters for better predictions
+    # Start with basic parameters
+    feature_cols = ['length', 'width', 'height', 'load']
+    
+    # Add additional parameters if available
+    if 'drag_coefficient' in df.columns:
+        feature_cols.append('drag_coefficient')
+    if 'wheelbase' in df.columns:
+        feature_cols.append('wheelbase')
+    if 'roof_angle' in df.columns:
+        feature_cols.append('roof_angle')
+    
+    # Only use columns that exist and have valid data
+    available_cols = [col for col in feature_cols if col in df.columns and df[col].notna().any()]
+    
+    print(f"Using {len(available_cols)} features: {available_cols}")
+    X = df[available_cols]
     y = df['max_stress']
     
     # 3. Train/Test Split

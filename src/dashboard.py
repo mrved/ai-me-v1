@@ -511,12 +511,50 @@ def main():
                     help="Overall height of the car"
                 )
                 
+                # Check if we have additional parameters in the data
+                df_check = get_data()
+                has_advanced_params = not df_check.empty and 'drag_coefficient' in df_check.columns
+                
+                if has_advanced_params:
+                    st.markdown("**Advanced Parameters:**")
+                    
+                    drag_coefficient = st.number_input(
+                        "Drag Coefficient (Cd)", 
+                        0.20, 0.35, 0.28,
+                        help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)"
+                    )
+                    
+                    wheelbase = st.number_input(
+                        "Wheelbase (m)", 
+                        2.5, 3.2, 2.8,
+                        help="Distance between front and rear axles"
+                    )
+                    
+                    roof_angle = st.number_input(
+                        "Roof Angle (degrees)", 
+                        -30.0, 30.0, 0.0,
+                        help="Greenhouse/roof angle"
+                    )
+                
                 st.markdown("**Loading Conditions:**")
-                load = st.number_input(
-                    "Aerodynamic Load (N)", 
-                    5000.0, 25000.0, 15000.0,
-                    help="Drag force at highway speeds (typically 10,000-20,000N)"
-                )
+                if has_advanced_params:
+                    # Calculate load from drag coefficient if available
+                    air_density = 1.2  # kg/m³
+                    velocity = 27.8  # m/s (100 km/h)
+                    frontal_area = width * height * 0.8
+                    calculated_load = 0.5 * air_density * drag_coefficient * frontal_area * velocity**2
+                    
+                    load = st.number_input(
+                        "Aerodynamic Load (N)", 
+                        100.0, 500.0, float(calculated_load),
+                        help=f"Drag force (calculated from Cd: {calculated_load:.0f}N, or enter custom)"
+                    )
+                else:
+                    load = st.number_input(
+                        "Aerodynamic Load (N)", 
+                        5000.0, 25000.0, 15000.0,
+                        help="Drag force at highway speeds (typically 10,000-20,000N)"
+                    )
                 
                 st.markdown("---")
                 predict_btn = st.button("🔬 Predict Performance", type="primary", use_container_width=True)
@@ -535,9 +573,22 @@ def main():
                 
                 if predict_btn:
                     try:
-                        # Prediction
-                        input_data = pd.DataFrame([[length, width, height, load]], 
-                                                columns=['length', 'width', 'height', 'load'])
+                        # Build input data with all available features
+                        df_check = get_data()
+                        has_advanced = not df_check.empty and 'drag_coefficient' in df_check.columns
+                        
+                        if has_advanced:
+                            # Use all 7 parameters for better accuracy
+                            input_data = pd.DataFrame([[
+                                length, width, height, load, 
+                                drag_coefficient, wheelbase, roof_angle
+                            ]], columns=['length', 'width', 'height', 'load', 
+                                        'drag_coefficient', 'wheelbase', 'roof_angle'])
+                        else:
+                            # Fallback to basic 4 parameters
+                            input_data = pd.DataFrame([[length, width, height, load]], 
+                                                    columns=['length', 'width', 'height', 'load'])
+                        
                         prediction = model.predict(input_data)[0]
                         
                         # Calculate additional metrics
