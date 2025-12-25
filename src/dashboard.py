@@ -548,147 +548,10 @@ def create_simple_box_viz(bounds):
 def main():
     st.title("AI-Driven Design Optimization")
     
-    tab1, tab2 = st.tabs(["Data Lakehouse", "Virtual Test Bench"])
+    tab1, tab2 = st.tabs(["Virtual Test Bench", "Data Lakehouse"])
     
-    # --- TAB 1: DATA EXPLORATION ---
+    # --- TAB 1: VIRTUAL TEST BENCH ---
     with tab1:
-        st.header("📦 Engineering Data Lakehouse")
-        
-        # Explanation
-        with st.expander("📖 About the Data Lakehouse", expanded=False):
-            st.markdown("""
-            This data lakehouse contains **real car design data** from DrivAerNet++ dataset with CFD simulations.
-            
-            **What's stored:**
-            - **Design Parameters**: Length, width, height, drag coefficient, and aerodynamic load
-            - **Performance Metrics**: Maximum stress and deflection from structural analysis
-            - **Real Data**: 2,000+ car designs with actual CFD drag coefficients
-            - **Additional Parameters**: Wheelbase, roof angle, windshield angle
-            
-            **Data Source:**
-            - DrivAerNet++: 8,000+ real car designs with high-fidelity CFD simulations
-            - Real drag coefficients from computational fluid dynamics
-            - Multiple car configurations (fastback, notchback, estateback)
-            
-            **Use this to:**
-            - Explore relationships between design parameters and performance
-            - Identify optimal design ranges using real aerodynamic data
-            - Understand stress patterns across different car geometries
-            """)
-        
-        df = get_data()
-        
-        if df.empty:
-            st.warning("No data found. Run ETL pipeline first.")
-            st.info(f"Looking for database at: {DB_FILE}")
-        else:
-            # Metrics
-            st.subheader("📊 Dataset Overview")
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Total Designs", len(df))
-            col2.metric("Avg Max Stress", f"{df['max_stress'].mean()/1e6:.1f} MPa")
-            col3.metric("Avg Deflection", f"{df['max_deflection'].mean()*1e6:.2f} μm")
-            col4.metric("Avg Load", f"{df['load'].mean()/1000:.1f} kN")
-            
-            st.markdown("---")
-            
-            # Filter section
-            st.subheader("🔍 Filter & Explore")
-            col_filter1, col_filter2 = st.columns(2)
-            
-            with col_filter1:
-                stress_threshold = st.slider(
-                    "Filter by Max Stress < (Pa)", 
-                    float(df['max_stress'].min()), 
-                    float(df['max_stress'].max()), 
-                    float(df['max_stress'].max()),
-                    help="Show only designs with stress below this threshold"
-                )
-            
-            with col_filter2:
-                min_load = st.slider(
-                    "Minimum Load (N)",
-                    float(df['load'].min()),
-                    float(df['load'].max()),
-                    float(df['load'].min()),
-                    help="Filter by minimum aerodynamic load"
-                )
-            
-            filtered_df = df[(df['max_stress'] < stress_threshold) & (df['load'] >= min_load)]
-            
-            st.write(f"**Showing {len(filtered_df)} of {len(df)} designs**")
-            
-            # Interactive visualizations
-            st.markdown("---")
-            st.subheader("📈 Design Analysis")
-            
-            viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Stress Analysis", "Design Space", "Data Table"])
-            
-            with viz_tab1:
-                # Stress vs dimensions
-                fig1 = px.scatter(
-                    filtered_df, 
-                    x='length', 
-                    y='max_stress',
-                    color='load',
-                    size='height',
-                    hover_data=['width', 'height', 'load'],
-                    labels={'length': 'Car Length (m)', 'max_stress': 'Max Stress (Pa)', 'load': 'Load (N)', 'height': 'Height (m)'},
-                    title='Stress vs Car Length (colored by load, sized by height)'
-                )
-                st.plotly_chart(fig1, use_container_width=True)
-                
-                # Stress distribution histogram
-                fig2 = px.histogram(
-                    filtered_df,
-                    x='max_stress',
-                    nbins=20,
-                    labels={'max_stress': 'Max Stress (Pa)', 'count': 'Number of Designs'},
-                    title='Stress Distribution Across Designs'
-                )
-                st.plotly_chart(fig2, use_container_width=True)
-            
-            with viz_tab2:
-                # 3D scatter of design space
-                fig3 = px.scatter_3d(
-                    filtered_df,
-                    x='length',
-                    y='width',
-                    z='height',
-                    color='max_stress',
-                    size='load',
-                    hover_data=['max_stress', 'load'],
-                    labels={'length': 'Length (m)', 'width': 'Width (m)', 'height': 'Height (m)', 
-                            'max_stress': 'Max Stress (Pa)', 'load': 'Load (N)'},
-                    title='3D Design Space Exploration'
-                )
-                fig3.update_layout(height=600)
-                st.plotly_chart(fig3, use_container_width=True)
-                
-                # Correlation heatmap
-                corr_cols = ['length', 'width', 'height', 'load', 'max_stress', 'max_deflection']
-                corr_matrix = filtered_df[corr_cols].corr()
-                fig4 = px.imshow(
-                    corr_matrix,
-                    labels=dict(x="Parameter", y="Parameter", color="Correlation"),
-                    x=corr_cols,
-                    y=corr_cols,
-                    color_continuous_scale='RdBu',
-                    aspect="auto",
-                    title='Parameter Correlations'
-                )
-                st.plotly_chart(fig4, use_container_width=True)
-            
-            with viz_tab3:
-                # Data table with better formatting
-                display_df = filtered_df.copy()
-                display_df['max_stress'] = display_df['max_stress'].apply(lambda x: f"{x:,.0f}")
-                display_df['load'] = display_df['load'].apply(lambda x: f"{x:,.0f}")
-                display_df['max_deflection'] = display_df['max_deflection'].apply(lambda x: f"{x:.2e}")
-                st.dataframe(display_df, use_container_width=True, height=400)
-
-    # --- TAB 2: INFERENCE ---
-    with tab2:
         st.header("🚗 Virtual Test Bench - Car Design Analysis")
         
         # Explanation section
@@ -993,7 +856,146 @@ def main():
                         - Design optimization insights
                         """)
 
-if __name__ == "__main__":
+
+    # --- TAB 2: DATA EXPLORATION ---
+# --- TAB 2: DATA EXPLORATION ---
+    with tab1:
+        st.header("📦 Engineering Data Lakehouse")
+        
+        # Explanation
+        with st.expander("📖 About the Data Lakehouse", expanded=False):
+            st.markdown("""
+            This data lakehouse contains **real car design data** from DrivAerNet++ dataset with CFD simulations.
+            
+            **What's stored:**
+            - **Design Parameters**: Length, width, height, drag coefficient, and aerodynamic load
+            - **Performance Metrics**: Maximum stress and deflection from structural analysis
+            - **Real Data**: 2,000+ car designs with actual CFD drag coefficients
+            - **Additional Parameters**: Wheelbase, roof angle, windshield angle
+            
+            **Data Source:**
+            - DrivAerNet++: 8,000+ real car designs with high-fidelity CFD simulations
+            - Real drag coefficients from computational fluid dynamics
+            - Multiple car configurations (fastback, notchback, estateback)
+            
+            **Use this to:**
+            - Explore relationships between design parameters and performance
+            - Identify optimal design ranges using real aerodynamic data
+            - Understand stress patterns across different car geometries
+            """)
+        
+        df = get_data()
+        
+        if df.empty:
+            st.warning("No data found. Run ETL pipeline first.")
+            st.info(f"Looking for database at: {DB_FILE}")
+        else:
+            # Metrics
+            st.subheader("📊 Dataset Overview")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Designs", len(df))
+            col2.metric("Avg Max Stress", f"{df['max_stress'].mean()/1e6:.1f} MPa")
+            col3.metric("Avg Deflection", f"{df['max_deflection'].mean()*1e6:.2f} μm")
+            col4.metric("Avg Load", f"{df['load'].mean()/1000:.1f} kN")
+            
+            st.markdown("---")
+            
+            # Filter section
+            st.subheader("🔍 Filter & Explore")
+            col_filter1, col_filter2 = st.columns(2)
+            
+            with col_filter1:
+                stress_threshold = st.slider(
+                    "Filter by Max Stress < (Pa)", 
+                    float(df['max_stress'].min()), 
+                    float(df['max_stress'].max()), 
+                    float(df['max_stress'].max()),
+                    help="Show only designs with stress below this threshold"
+                )
+            
+            with col_filter2:
+                min_load = st.slider(
+                    "Minimum Load (N)",
+                    float(df['load'].min()),
+                    float(df['load'].max()),
+                    float(df['load'].min()),
+                    help="Filter by minimum aerodynamic load"
+                )
+            
+            filtered_df = df[(df['max_stress'] < stress_threshold) & (df['load'] >= min_load)]
+            
+            st.write(f"**Showing {len(filtered_df)} of {len(df)} designs**")
+            
+            # Interactive visualizations
+            st.markdown("---")
+            st.subheader("📈 Design Analysis")
+            
+            viz_tab1, viz_tab2, viz_tab3 = st.tabs(["Stress Analysis", "Design Space", "Data Table"])
+            
+            with viz_tab1:
+                # Stress vs dimensions
+                fig1 = px.scatter(
+                    filtered_df, 
+                    x='length', 
+                    y='max_stress',
+                    color='load',
+                    size='height',
+                    hover_data=['width', 'height', 'load'],
+                    labels={'length': 'Car Length (m)', 'max_stress': 'Max Stress (Pa)', 'load': 'Load (N)', 'height': 'Height (m)'},
+                    title='Stress vs Car Length (colored by load, sized by height)'
+                )
+                st.plotly_chart(fig1, use_container_width=True)
+                
+                # Stress distribution histogram
+                fig2 = px.histogram(
+                    filtered_df,
+                    x='max_stress',
+                    nbins=20,
+                    labels={'max_stress': 'Max Stress (Pa)', 'count': 'Number of Designs'},
+                    title='Stress Distribution Across Designs'
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+            
+            with viz_tab2:
+                # 3D scatter of design space
+                fig3 = px.scatter_3d(
+                    filtered_df,
+                    x='length',
+                    y='width',
+                    z='height',
+                    color='max_stress',
+                    size='load',
+                    hover_data=['max_stress', 'load'],
+                    labels={'length': 'Length (m)', 'width': 'Width (m)', 'height': 'Height (m)', 
+                            'max_stress': 'Max Stress (Pa)', 'load': 'Load (N)'},
+                    title='3D Design Space Exploration'
+                )
+                fig3.update_layout(height=600)
+                st.plotly_chart(fig3, use_container_width=True)
+                
+                # Correlation heatmap
+                corr_cols = ['length', 'width', 'height', 'load', 'max_stress', 'max_deflection']
+                corr_matrix = filtered_df[corr_cols].corr()
+                fig4 = px.imshow(
+                    corr_matrix,
+                    labels=dict(x="Parameter", y="Parameter", color="Correlation"),
+                    x=corr_cols,
+                    y=corr_cols,
+                    color_continuous_scale='RdBu',
+                    aspect="auto",
+                    title='Parameter Correlations'
+                )
+                st.plotly_chart(fig4, use_container_width=True)
+            
+            with viz_tab3:
+                # Data table with better formatting
+                display_df = filtered_df.copy()
+                display_df['max_stress'] = display_df['max_stress'].apply(lambda x: f"{x:,.0f}")
+                display_df['load'] = display_df['load'].apply(lambda x: f"{x:,.0f}")
+                display_df['max_deflection'] = display_df['max_deflection'].apply(lambda x: f"{x:.2e}")
+                st.dataframe(display_df, use_container_width=True, height=400)
+
+    if __name__ == "__main__":
     try:
         main()
     except Exception as e:
