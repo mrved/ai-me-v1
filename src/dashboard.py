@@ -84,51 +84,161 @@ def load_model():
         return None
 
 def create_car_mesh_3d(length, width, height, stress_value=None):
-    """Create a 3D car mesh for visualization"""
-    # Main body (chassis)
-    body = pv.Cube(center=(length/2, 0, height*0.3), 
-                   x_length=length*0.9, 
-                   y_length=width, 
-                   z_length=height*0.4)
-    
-    # Cabin section
-    cabin = pv.Cube(center=(length*0.6, 0, height*0.7), 
-                    x_length=length*0.5, 
-                    y_length=width*0.85, 
-                    z_length=height*0.5)
-    
-    # Hood section
-    hood = pv.Cube(center=(length*0.2, 0, height*0.25), 
-                   x_length=length*0.3, 
-                   y_length=width*0.9, 
-                   z_length=height*0.3)
-    
-    # Combine or use body as fallback
+    """Create a realistic 3D car mesh for visualization"""
     try:
-        mesh = body.boolean_union(cabin)
-        mesh = mesh.boolean_union(hood)
-        if mesh.n_points == 0:
-            mesh = body
-    except:
-        mesh = body
-    
-    mesh = mesh.triangulate()
-    
-    # Add stress field if provided
-    if stress_value is not None:
+        # Create car body with better proportions
+        # Main chassis (lower body)
+        chassis = pv.Cube(
+            center=(length/2, 0, height*0.15), 
+            x_length=length*0.95, 
+            y_length=width, 
+            z_length=height*0.25
+        )
+        
+        # Upper body (cabin area)
+        upper_body = pv.Cube(
+            center=(length*0.55, 0, height*0.65), 
+            x_length=length*0.55, 
+            y_length=width*0.92, 
+            z_length=height*0.5
+        )
+        
+        # Hood (front section, tapered)
+        hood = pv.Cube(
+            center=(length*0.25, 0, height*0.2), 
+            x_length=length*0.35, 
+            y_length=width*0.95, 
+            z_length=height*0.25
+        )
+        
+        # Trunk/rear section
+        trunk = pv.Cube(
+            center=(length*0.85, 0, height*0.2), 
+            x_length=length*0.25, 
+            y_length=width*0.95, 
+            z_length=height*0.25
+        )
+        
+        # Windshield (angled front glass area)
+        windshield = pv.Cube(
+            center=(length*0.4, 0, height*0.75), 
+            x_length=length*0.15, 
+            y_length=width*0.88, 
+            z_length=height*0.15
+        )
+        
+        # Combine all parts
         try:
-            points = mesh.points
-            if len(points) > 0:
-                x_coords = points[:, 0]
-                z_coords = points[:, 2]
-                x_norm = (x_coords - x_coords.min()) / (x_coords.max() - x_coords.min() + 1e-10)
-                z_norm = (z_coords - z_coords.min()) / (z_coords.max() - z_coords.min() + 1e-10)
-                stress_field = stress_value * (0.5 + 0.3 * (1 - x_norm) + 0.2 * (1 - z_norm))
-                mesh.point_data["stress"] = stress_field
+            mesh = chassis
+            for part in [upper_body, hood, trunk, windshield]:
+                try:
+                    mesh = mesh.boolean_union(part)
+                except:
+                    pass  # Skip if boolean fails
         except:
-            pass  # If stress field can't be added, continue without it
-    
-    return mesh
+            # Fallback: combine simpler
+            mesh = chassis
+            try:
+                mesh = mesh.boolean_union(upper_body)
+            except:
+                pass
+        
+        # Add wheels (cylinders)
+        wheel_radius = width * 0.15
+        wheel_width = width * 0.12
+        wheel_z = wheel_radius
+        
+        # Front wheels
+        front_wheel_left = pv.Cylinder(
+            center=(length*0.25, -width/2 - wheel_width/2, wheel_z),
+            direction=(0, 1, 0),
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        front_wheel_right = pv.Cylinder(
+            center=(length*0.25, width/2 + wheel_width/2, wheel_z),
+            direction=(0, 1, 0),
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        
+        # Rear wheels
+        rear_wheel_left = pv.Cylinder(
+            center=(length*0.75, -width/2 - wheel_width/2, wheel_z),
+            direction=(0, 1, 0),
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        rear_wheel_right = pv.Cylinder(
+            center=(length*0.75, width/2 + wheel_width/2, wheel_z),
+            direction=(0, 1, 0),
+            radius=wheel_radius,
+            height=wheel_width
+        )
+        
+        # Add wheels to mesh
+        try:
+            for wheel in [front_wheel_left, front_wheel_right, rear_wheel_left, rear_wheel_right]:
+                try:
+                    mesh = mesh.boolean_union(wheel)
+                except:
+                    pass
+        except:
+            pass  # Wheels are optional
+        
+        # Smooth and triangulate
+        mesh = mesh.triangulate()
+        
+        # Add stress field if provided
+        if stress_value is not None:
+            try:
+                points = mesh.points
+                if len(points) > 0:
+                    x_coords = points[:, 0]
+                    z_coords = points[:, 2]
+                    x_norm = (x_coords - x_coords.min()) / (x_coords.max() - x_coords.min() + 1e-10)
+                    z_norm = (z_coords - z_coords.min()) / (z_coords.max() - z_coords.min() + 1e-10)
+                    
+                    # More realistic stress distribution
+                    # Higher at front (aerodynamic), at bottom (structural), and at wheel wells
+                    stress_base = stress_value * 0.4
+                    stress_front = stress_value * 0.3 * (1.0 - x_norm)  # Higher at front
+                    stress_bottom = stress_value * 0.2 * (1.0 - z_norm / height)  # Higher at bottom
+                    stress_wheels = stress_value * 0.1 * np.exp(-((x_coords - length*0.25)**2 + (x_coords - length*0.75)**2) / (length*0.1)**2)
+                    
+                    stress_field = stress_base + stress_front + stress_bottom + stress_wheels
+                    stress_field = np.clip(stress_field, 0, stress_value * 1.3)
+                    mesh.point_data["stress"] = stress_field
+            except:
+                pass
+        
+        return mesh
+        
+    except Exception as e:
+        # Ultimate fallback: simple car shape
+        try:
+            body = pv.Cube(center=(length/2, 0, height*0.3), x_length=length*0.9, y_length=width, z_length=height*0.4)
+            cabin = pv.Cube(center=(length*0.6, 0, height*0.7), x_length=length*0.5, y_length=width*0.85, z_length=height*0.5)
+            try:
+                mesh = body.boolean_union(cabin)
+            except:
+                mesh = body
+            mesh = mesh.triangulate()
+            
+            if stress_value is not None:
+                points = mesh.points
+                if len(points) > 0:
+                    x_coords = points[:, 0]
+                    z_coords = points[:, 2]
+                    x_norm = (x_coords - x_coords.min()) / (x_coords.max() - x_coords.min() + 1e-10)
+                    z_norm = (z_coords - z_coords.min()) / (z_coords.max() - z_coords.min() + 1e-10)
+                    stress_field = stress_value * (0.5 + 0.3 * (1 - x_norm) + 0.2 * (1 - z_norm))
+                    mesh.point_data["stress"] = stress_field
+            
+            return mesh
+        except:
+            # Last resort: simple box
+            return pv.Cube(center=(length/2, 0, height/2), x_length=length, y_length=width, z_length=height)
 
 def plotly_mesh_from_pyvista(mesh, stress_field=None):
     """Convert PyVista mesh to Plotly 3D visualization"""
