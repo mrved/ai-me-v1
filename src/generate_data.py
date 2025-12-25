@@ -84,7 +84,17 @@ def generate_sample(index):
     length = random.uniform(3.5, 5.5)  # Car length in meters (compact to full-size)
     width = random.uniform(1.6, 2.0)   # Car width in meters
     height = random.uniform(1.4, 1.8)  # Car height in meters
-    load = random.uniform(5000, 25000)  # Aerodynamic drag force in Newtons (at highway speeds)
+    
+    # Advanced parameters for better model training
+    drag_coefficient = random.uniform(0.20, 0.35)  # Drag coefficient (Cd)
+    wheelbase = random.uniform(2.1, 3.3)  # Wheelbase in meters (typically 60-70% of length)
+    roof_angle = random.uniform(-30.0, 30.0)  # Roof angle in degrees
+    
+    # Calculate load from drag coefficient (more realistic)
+    air_density = 1.2  # kg/m³
+    velocity = 27.8  # m/s (100 km/h)
+    frontal_area = width * height * 0.8  # Approximate frontal area
+    load = 0.5 * air_density * drag_coefficient * frontal_area * velocity**2
     
     # Create car-like mesh
     try:
@@ -125,6 +135,10 @@ def generate_sample(index):
     mesh.field_data["height"] = np.array([height])
     mesh.field_data["load"] = np.array([load])
     mesh.field_data["max_deflection"] = np.array([results["max_deflection"]])
+    # Advanced parameters
+    mesh.field_data["drag_coefficient"] = np.array([drag_coefficient])
+    mesh.field_data["wheelbase"] = np.array([wheelbase])
+    mesh.field_data["roof_angle"] = np.array([roof_angle])
     
     # Save
     os.makedirs(OUTPUT_DIR, exist_ok=True)

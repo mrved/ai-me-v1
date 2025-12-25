@@ -28,6 +28,11 @@ def extract_metadata(filepath):
         
         max_deflection = float(mesh.field_data["max_deflection"][0])
         
+        # Extract advanced parameters if available, otherwise use defaults
+        drag_coefficient = float(mesh.field_data.get("drag_coefficient", [0.26])[0])
+        wheelbase = float(mesh.field_data.get("wheelbase", [length * 0.6])[0])
+        roof_angle = float(mesh.field_data.get("roof_angle", [0.0])[0])
+        
         return {
             "filename": os.path.basename(filepath),
             "length": length,
@@ -35,7 +40,11 @@ def extract_metadata(filepath):
             "height": height,
             "load": load,
             "max_stress": max_stress,
-            "max_deflection": max_deflection
+            "max_deflection": max_deflection,
+            "source": "synthetic",
+            "drag_coefficient": drag_coefficient,
+            "wheelbase": wheelbase,
+            "roof_angle": roof_angle
         }
     except Exception as e:
         print(f"Error processing {filepath}: {e}")
