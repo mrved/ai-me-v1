@@ -993,6 +993,158 @@ def main():
                 display_df['load'] = display_df['load'].apply(lambda x: f"{x:,.0f}")
                 display_df['max_deflection'] = display_df['max_deflection'].apply(lambda x: f"{x:.2e}")
                 st.dataframe(display_df, use_container_width=True, height=400)
+    
+    # --- TAB 3: AI DESIGN ASSISTANT ---
+    with tab3:
+        st.header("🤖 AI Design Assistant")
+        st.markdown("Describe your car design in natural language, and I'll create it for you!")
+        
+        # Import LLM assistant
+        try:
+            from src.llm_design_assistant import DesignAssistant
+            assistant_available = True
+        except ImportError:
+            assistant_available = False
+            st.warning("⚠️ LLM assistant module not available. Install OpenAI: `pip install openai`")
+        
+        if assistant_available:
+            # Initialize assistant
+            api_key = st.sidebar.text_input(
+                "OpenAI API Key (optional)",
+                type="password",
+                help="Leave empty to use OPENAI_API_KEY environment variable, or use fallback parser"
+            )
+            
+            if api_key:
+                os.environ["OPENAI_API_KEY"] = api_key
+            
+            assistant = DesignAssistant(api_key=api_key if api_key else None)
+            
+            # Chat interface
+            st.subheader("💬 Describe Your Design")
+            
+            # Example prompts
+            with st.expander("📝 Example Prompts", expanded=False):
+                st.markdown("""
+                **Try these examples:**
+                - "Create a sporty car with low drag coefficient, length 4.5m"
+                - "Design an aerodynamic family car with minimal stress"
+                - "I want a compact car, width 1.8m, height 1.6m, optimize for efficiency"
+                - "Build a fast car with drag coefficient below 0.25"
+                """)
+            
+            # User input
+            user_prompt = st.text_area(
+                "What kind of car do you want to design?",
+                placeholder="e.g., 'Create a sporty, aerodynamic car with low drag coefficient...'",
+                height=100
+            )
+            
+            col_parse, col_execute = st.columns(2)
+            
+            with col_parse:
+                parse_btn = st.button("🔍 Parse & Plan", type="primary", use_container_width=True)
+            
+            with col_execute:
+                execute_btn = st.button("🚀 Execute Plan", use_container_width=True, disabled=not st.session_state.get('execution_plan'))
+            
+            if parse_btn and user_prompt:
+                with st.spinner("🤖 Analyzing your design requirements..."):
+                    # Parse prompt
+                    parsed = assistant.parse_design_prompt(user_prompt)
+                    
+                    # Get current data for context
+                    df_context = get_data()
+                    
+                    # Generate plan
+                    plan = assistant.generate_plan(parsed, df_context)
+                    
+                    # Store in session state
+                    st.session_state['parsed_requirements'] = parsed
+                    st.session_state['execution_plan'] = plan
+                    st.session_state['assistant'] = assistant
+                
+                # Display parsed requirements
+                st.success("✅ Requirements parsed!")
+                st.subheader("📋 Parsed Requirements")
+                
+                col_req1, col_req2 = st.columns(2)
+                
+                with col_req1:
+                    st.markdown("**Parameters:**")
+                    params = parsed.get("parameters", {})
+                    for param, value in params.items():
+                        if value is not None:
+                            st.write(f"- {param}: {value}")
+                        else:
+                            st.write(f"- {param}: *to be optimized*")
+                
+                with col_req2:
+                    st.markdown("**Goals:**")
+                    goals = parsed.get("goals", [])
+                    if goals:
+                        for goal in goals:
+                            st.write(f"- {goal.replace('_', ' ').title()}")
+                    else:
+                        st.write("- General optimization")
+                
+                # Display execution plan
+                st.subheader("📝 Execution Plan")
+                plan_steps = plan.get("steps", [])
+                
+                for step in plan_steps:
+                    action = step.get("action", "")
+                    if action == "set_parameter":
+                        st.info(f"**Step {step.get('step_number', '?')}**: Set {step.get('parameter')} = {step.get('value')}")
+                        st.caption(f"   Reason: {step.get('reason', 'N/A')}")
+                    elif action == "optimize":
+                        st.info(f"**Step {step.get('step_number', '?')}**: Optimize for {step.get('target', 'N/A')}")
+                        st.caption(f"   Method: {step.get('method', 'N/A')}")
+                
+                st.markdown(f"**Expected Outcome:** {plan.get('expected_outcome', 'Design optimization')}")
+            
+            if execute_btn and 'execution_plan' in st.session_state:
+                assistant = st.session_state.get('assistant')
+                plan = st.session_state.get('execution_plan')
+                
+                with st.spinner("🚀 Executing plan..."):
+                    # Get current parameters (defaults)
+                    current_params = {
+                        "length": 4.5,
+                        "width": 1.8,
+                        "height": 1.6,
+                        "drag_coefficient": 0.26,
+                        "wheelbase": 2.8,
+                        "roof_angle": 0.0
+                    }
+                    
+                    # Execute plan
+                    final_params = assistant.execute_plan(plan, current_params)
+                    
+                    # Store in session state for use in Virtual Test Bench
+                    st.session_state['llm_generated_params'] = final_params
+                
+                st.success("✅ Plan executed! Parameters ready.")
+                st.subheader("🎯 Generated Design Parameters")
+                
+                col_param1, col_param2 = st.columns(2)
+                
+                with col_param1:
+                    st.metric("Length", f"{final_params.get('length', 0):.2f} m")
+                    st.metric("Width", f"{final_params.get('width', 0):.2f} m")
+                    st.metric("Height", f"{final_params.get('height', 0):.2f} m")
+                
+                with col_param2:
+                    st.metric("Drag Coefficient", f"{final_params.get('drag_coefficient', 0):.3f}")
+                    st.metric("Wheelbase", f"{final_params.get('wheelbase', 0):.2f} m")
+                    st.metric("Roof Angle", f"{final_params.get('roof_angle', 0):.1f}°")
+                
+                st.info("💡 **Next Step**: Go to 'Virtual Test Bench' tab to see these parameters applied and get predictions!")
+                
+                # Auto-fill option
+                if st.button("📊 Apply to Virtual Test Bench", type="primary"):
+                    st.session_state['apply_llm_params'] = True
+                    st.rerun()
 
 if __name__ == "__main__":
     try:

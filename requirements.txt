@@ -9,3 +9,4 @@ sqlalchemy
 streamlit
 plotly
 matplotlib
+openai>=1.0.0
