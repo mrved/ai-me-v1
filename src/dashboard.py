@@ -790,9 +790,23 @@ def main():
                         help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)",
                         key="cd_input"
                     )
-                    # For drag coefficient, lower is better
-                    if drag_coefficient > suggested_cd:
+                    # For drag coefficient, lower is better - show subtle guidance with slider
+                    diff_cd = drag_coefficient - suggested_cd
+                    diff_cd_pct = abs(diff_cd) / (CD_MAX - CD_MIN) * 100 if (CD_MAX - CD_MIN) > 0 else 0
+                    if diff_cd_pct < 2:
+                        st.caption(f"✓ Optimal: {suggested_cd:.3f}")
+                    elif drag_coefficient > suggested_cd:
                         st.caption(f"↓ Decrease to {suggested_cd:.3f} (lower is better)")
+                        # Show slider
+                        current_pos = int((drag_coefficient - CD_MIN) / (CD_MAX - CD_MIN) * 100) if (CD_MAX - CD_MIN) > 0 else 50
+                        optimal_pos = int((suggested_cd - CD_MIN) / (CD_MAX - CD_MIN) * 100) if (CD_MAX - CD_MIN) > 0 else 50
+                        st.markdown(
+                            f'<div style="position: relative; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 2px 0;">'
+                            f'<div style="position: absolute; left: {optimal_pos}%; width: 2px; height: 100%; background: #4CAF50; border-radius: 1px;"></div>'
+                            f'<div style="position: absolute; left: {current_pos}%; width: 2px; height: 100%; background: #2196F3; border-radius: 1px;"></div>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
                     else:
                         st.caption(f"✓ Optimal: {suggested_cd:.3f}")
                     
