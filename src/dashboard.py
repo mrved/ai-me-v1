@@ -29,13 +29,58 @@ def get_data():
         st.error(f"Error loading data: {str(e)}")
         return pd.DataFrame()
 
+@st.cache_resource
 def load_model():
+    """Load model, auto-generating if needed"""
     try:
         if MODEL_PATH.exists():
             return joblib.load(MODEL_PATH)
+        
+        # If model doesn't exist, try to generate it
+        with st.spinner("🔄 Model not found. Setting up... This may take 30-60 seconds on first run."):
+            # Check if data exists
+            if not DB_FILE.exists():
+                # Generate data first
+                import subprocess
+                import sys
+                with st.status("Generating car design data...", expanded=False) as status:
+                    result = subprocess.run([sys.executable, str(PROJECT_ROOT / "src" / "generate_data.py")], 
+                                          capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+                    if result.returncode != 0:
+                        st.error(f"Failed to generate data: {result.stderr}")
+                        return None
+                    status.update(label="✅ Data generated", state="complete")
+                
+                # Run ETL
+                with st.status("Running ETL pipeline...", expanded=False) as status:
+                    result = subprocess.run([sys.executable, str(PROJECT_ROOT / "src" / "etl.py")],
+                                          capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+                    if result.returncode != 0:
+                        st.error(f"Failed to run ETL: {result.stderr}")
+                        return None
+                    status.update(label="✅ ETL completed", state="complete")
+            
+            # Train model
+            with st.status("Training ML model...", expanded=False) as status:
+                import subprocess
+                import sys
+                result = subprocess.run([sys.executable, str(PROJECT_ROOT / "src" / "train.py")],
+                                      capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+                if result.returncode != 0:
+                    st.error(f"Failed to train model: {result.stderr}")
+                    return None
+                status.update(label="✅ Model trained", state="complete")
+        
+        # Load the newly created model
+        if MODEL_PATH.exists():
+            st.success("✅ Setup complete! Model is ready.")
+            return joblib.load(MODEL_PATH)
+        
         return None
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 def create_car_mesh_3d(length, width, height, stress_value=None):
