@@ -54,7 +54,11 @@ def run_etl():
         Column('height', Float),
         Column('load', Float),
         Column('max_stress', Float),
-        Column('max_deflection', Float)
+        Column('max_deflection', Float),
+        Column('source', String),
+        Column('drag_coefficient', Float),
+        Column('wheelbase', Float),
+        Column('roof_angle', Float)
     )
     
     metadata.create_all(engine)
