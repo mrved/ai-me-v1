@@ -37,7 +37,7 @@ def load_model():
             return joblib.load(MODEL_PATH)
         
         # If model doesn't exist, try to generate it
-        with st.spinner("🔄 Model not found. Setting up... This may take 30-60 seconds on first run."):
+        with st.spinner("🔄 Model not found. Setting up... This may take 1-2 minutes on first run."):
             # Check if data exists
             if not DB_FILE.exists():
                 # Generate data first

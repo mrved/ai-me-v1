@@ -147,8 +147,13 @@ def generate_sample(index):
     print(f"Generated {filename} (L={length:.2f}m, W={width:.2f}m, H={height:.2f}m, Load={load:.0f}N)")
 
 if __name__ == "__main__":
-    num_samples = 50  # Generate 50 car designs
+    # For Streamlit Cloud, generate fewer samples for faster setup
+    # Can be overridden with environment variable
+    import os
+    num_samples = int(os.getenv("NUM_SAMPLES", "20"))  # Default 20 for faster setup
     print(f"Generating {num_samples} car design samples...")
     for i in range(num_samples):
         generate_sample(i)
+        if (i + 1) % 5 == 0:
+            print(f"  Progress: {i+1}/{num_samples} samples generated...")
     print(f"\nCompleted! Generated {num_samples} car design files in {OUTPUT_DIR}")
