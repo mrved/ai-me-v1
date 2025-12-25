@@ -303,7 +303,9 @@ def plotly_mesh_from_pyvista(mesh, stress_field=None):
             raise ValueError("Empty mesh")
         
         # Handle faces - check if mesh has faces
-        if mesh.n_faces == 0:
+        # Use n_cells instead of n_faces (PyVista API change)
+        n_faces = mesh.n_cells if hasattr(mesh, 'n_cells') else (mesh.n_faces if hasattr(mesh, 'n_faces') else 0)
+        if n_faces == 0:
             # Fallback: create simple box visualization
             return create_simple_box_viz(mesh.bounds)
         
