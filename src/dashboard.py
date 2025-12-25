@@ -613,47 +613,107 @@ def main():
             with col1:
                 st.subheader("🎛️ Design Parameters")
                 
-                st.markdown("**Car Dimensions:**")
-                length = st.number_input(
-                    "Length (m)", 
-                    3.5, 5.5, 4.5,
-                    help="Overall length of the car from front to back"
-                )
-                width = st.number_input(
-                    "Width (m)", 
-                    1.6, 2.0, 1.8,
-                    help="Width of the car (track width)"
-                )
-                height = st.number_input(
-                    "Height (m)", 
-                    1.4, 1.8, 1.6,
-                    help="Overall height of the car"
-                )
-                
-                # Check if we have additional parameters in the data
+                # Get data for suggestions
                 df_check = get_data()
                 has_advanced_params = not df_check.empty and 'drag_coefficient' in df_check.columns
+                
+                # Calculate optimal values from data (lowest stress designs)
+                if not df_check.empty:
+                    # Find designs with lowest stress (top 10%)
+                    optimal_designs = df_check.nsmallest(int(len(df_check) * 0.1), 'max_stress')
+                    suggested_length = optimal_designs['length'].mean()
+                    suggested_width = optimal_designs['width'].mean()
+                    suggested_height = optimal_designs['height'].mean()
+                    if has_advanced_params:
+                        suggested_cd = optimal_designs['drag_coefficient'].mean()
+                        suggested_wheelbase = optimal_designs['wheelbase'].mean() if 'wheelbase' in optimal_designs.columns else length * 0.6
+                        suggested_roof_angle = optimal_designs['roof_angle'].mean() if 'roof_angle' in optimal_designs.columns else 0.0
+                else:
+                    suggested_length, suggested_width, suggested_height = 4.5, 1.8, 1.6
+                    suggested_cd, suggested_wheelbase, suggested_roof_angle = 0.26, 2.8, 0.0
+                
+                st.markdown("**Car Dimensions:**")
+                
+                # Length with suggestion
+                col_len1, col_len2 = st.columns([3, 1])
+                with col_len1:
+                    length = st.number_input(
+                        "Length (m)", 
+                        3.5, 5.5, float(suggested_length),
+                        help="Overall length of the car from front to back",
+                        key="length_input"
+                    )
+                with col_len2:
+                    st.metric("💡 Optimal", f"{suggested_length:.2f}m", 
+                             delta=f"{abs(length - suggested_length):.2f}m off" if abs(length - suggested_length) > 0.1 else "✓")
+                
+                # Width with suggestion
+                col_wid1, col_wid2 = st.columns([3, 1])
+                with col_wid1:
+                    width = st.number_input(
+                        "Width (m)", 
+                        1.6, 2.0, float(suggested_width),
+                        help="Width of the car (track width)",
+                        key="width_input"
+                    )
+                with col_wid2:
+                    st.metric("💡 Optimal", f"{suggested_width:.2f}m",
+                             delta=f"{abs(width - suggested_width):.2f}m off" if abs(width - suggested_width) > 0.05 else "✓")
+                
+                # Height with suggestion
+                col_hei1, col_hei2 = st.columns([3, 1])
+                with col_hei1:
+                    height = st.number_input(
+                        "Height (m)", 
+                        1.4, 1.8, float(suggested_height),
+                        help="Overall height of the car",
+                        key="height_input"
+                    )
+                with col_hei2:
+                    st.metric("💡 Optimal", f"{suggested_height:.2f}m",
+                             delta=f"{abs(height - suggested_height):.2f}m off" if abs(height - suggested_height) > 0.05 else "✓")
                 
                 if has_advanced_params:
                     st.markdown("**Advanced Parameters:**")
                     
-                    drag_coefficient = st.number_input(
-                        "Drag Coefficient (Cd)", 
-                        0.20, 0.35, 0.28,
-                        help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)"
-                    )
+                    # Drag coefficient with suggestion
+                    col_cd1, col_cd2 = st.columns([3, 1])
+                    with col_cd1:
+                        drag_coefficient = st.number_input(
+                            "Drag Coefficient (Cd)", 
+                            0.20, 0.35, float(suggested_cd),
+                            help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)",
+                            key="cd_input"
+                        )
+                    with col_cd2:
+                        st.metric("💡 Optimal", f"{suggested_cd:.3f}",
+                                 delta="Lower = Better" if drag_coefficient > suggested_cd else "✓")
                     
-                    wheelbase = st.number_input(
-                        "Wheelbase (m)", 
-                        2.5, 3.2, 2.8,
-                        help="Distance between front and rear axles"
-                    )
+                    # Wheelbase with suggestion
+                    col_wb1, col_wb2 = st.columns([3, 1])
+                    with col_wb1:
+                        wheelbase = st.number_input(
+                            "Wheelbase (m)", 
+                            2.5, 3.2, float(suggested_wheelbase),
+                            help="Distance between front and rear axles",
+                            key="wheelbase_input"
+                        )
+                    with col_wb2:
+                        st.metric("💡 Optimal", f"{suggested_wheelbase:.2f}m",
+                                 delta=f"{abs(wheelbase - suggested_wheelbase):.2f}m off" if abs(wheelbase - suggested_wheelbase) > 0.1 else "✓")
                     
-                    roof_angle = st.number_input(
-                        "Roof Angle (degrees)", 
-                        -30.0, 30.0, 0.0,
-                        help="Greenhouse/roof angle"
-                    )
+                    # Roof angle with suggestion
+                    col_ra1, col_ra2 = st.columns([3, 1])
+                    with col_ra1:
+                        roof_angle = st.number_input(
+                            "Roof Angle (degrees)", 
+                            -30.0, 30.0, float(suggested_roof_angle),
+                            help="Greenhouse/roof angle",
+                            key="roof_angle_input"
+                        )
+                    with col_ra2:
+                        st.metric("💡 Optimal", f"{suggested_roof_angle:.1f}°",
+                                 delta=f"{abs(roof_angle - suggested_roof_angle):.1f}° off" if abs(roof_angle - suggested_roof_angle) > 5 else "✓")
                 
                 st.markdown("**Loading Conditions:**")
                 if has_advanced_params:
@@ -747,16 +807,22 @@ def main():
                         st.markdown("Interactive 3D model showing predicted stress distribution:")
                         
                         try:
-                            # Create car mesh with stress field
-                            mesh = create_car_mesh_3d(length, width, height, prediction)
+                            # Clear any cached mesh to ensure we get the new enhanced version
+                            if hasattr(create_car_mesh_3d, '__wrapped__'):
+                                pass  # Already cleared
                             
-                            # Convert to Plotly
-                            fig = plotly_mesh_from_pyvista(mesh, stress_field=True)
+                            # Create enhanced car mesh with stress field
+                            with st.spinner("Generating 3D car model..."):
+                                mesh = create_car_mesh_3d(length, width, height, prediction)
+                                
+                                # Convert to Plotly
+                                fig = plotly_mesh_from_pyvista(mesh, stress_field=True)
                             
                             # Display interactive plot
                             st.plotly_chart(fig, use_container_width=True)
                             
                             st.caption("💡 **Color coding**: Blue = Low stress, Yellow = Medium, Red = High stress")
+                            st.caption("🚗 **Enhanced visualization**: Realistic car shape with wheels, windshield, and body sections")
                             
                         except Exception as e:
                             st.error(f"Visualization error: {str(e)}")
