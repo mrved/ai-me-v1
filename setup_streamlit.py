@@ -34,6 +34,22 @@ def setup():
         return False
     print("✅ ETL completed")
     
+    # Step 2.5: Import real DrivAerNet++ data if available
+    print("\n📥 Step 2.5: Importing real car design data...")
+    drivaernet_csv = PROJECT_ROOT / "data" / "drivaernet" / "ParametricModels" / "DrivAerNet_ParametricData.csv"
+    if drivaernet_csv.exists():
+        print(f"   Found DrivAerNet++ data at {drivaernet_csv}")
+        result = subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "src" / "import_drivaernet_csv.py")],
+            cwd=str(PROJECT_ROOT)
+        )
+        if result.returncode == 0:
+            print("✅ Real data imported")
+        else:
+            print("⚠️  Real data import failed, continuing with synthetic data")
+    else:
+        print("   No real data found, using synthetic data only")
+    
     # Step 3: Train model
     print("\n🤖 Step 3: Training ML model...")
     result = subprocess.run(
