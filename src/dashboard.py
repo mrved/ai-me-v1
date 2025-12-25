@@ -858,8 +858,7 @@ def main():
 
 
     # --- TAB 2: DATA EXPLORATION ---
-# --- TAB 2: DATA EXPLORATION ---
-    with tab1:
+    with tab2:
         st.header("📦 Engineering Data Lakehouse")
         
         # Explanation
