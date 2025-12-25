@@ -548,7 +548,7 @@ def create_simple_box_viz(bounds):
 def main():
     st.title("AI-Driven Design Optimization")
     
-    tab1, tab2 = st.tabs(["Virtual Test Bench", "Data Lakehouse"])
+    tab1, tab2, tab3 = st.tabs(["Virtual Test Bench", "Data Lakehouse", "🤖 AI Design Assistant"])
     
     # --- TAB 1: VIRTUAL TEST BENCH ---
     with tab1:
