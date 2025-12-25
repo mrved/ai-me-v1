@@ -86,30 +86,35 @@ def load_model():
 def create_car_mesh_3d(length, width, height, stress_value=None):
     """Create a realistic 3D car mesh for visualization"""
     try:
-        # Create car body with better proportions
-        # Main chassis (lower body)
+        # Use MultiBlock to combine parts reliably (avoids boolean union failures)
+        parts = []
+        
+        # Main chassis (lower body) - base of car
         chassis = pv.Cube(
             center=(length/2, 0, height*0.15), 
             x_length=length*0.95, 
             y_length=width, 
             z_length=height*0.25
         )
+        parts.append(chassis)
         
-        # Upper body (cabin area)
+        # Upper body (cabin area) - passenger compartment
         upper_body = pv.Cube(
             center=(length*0.55, 0, height*0.65), 
             x_length=length*0.55, 
             y_length=width*0.92, 
             z_length=height*0.5
         )
+        parts.append(upper_body)
         
-        # Hood (front section, tapered)
+        # Hood (front section)
         hood = pv.Cube(
             center=(length*0.25, 0, height*0.2), 
             x_length=length*0.35, 
             y_length=width*0.95, 
             z_length=height*0.25
         )
+        parts.append(hood)
         
         # Trunk/rear section
         trunk = pv.Cube(
@@ -118,30 +123,16 @@ def create_car_mesh_3d(length, width, height, stress_value=None):
             y_length=width*0.95, 
             z_length=height*0.25
         )
+        parts.append(trunk)
         
-        # Windshield (angled front glass area)
+        # Windshield (front glass area)
         windshield = pv.Cube(
             center=(length*0.4, 0, height*0.75), 
             x_length=length*0.15, 
             y_length=width*0.88, 
             z_length=height*0.15
         )
-        
-        # Combine all parts
-        try:
-            mesh = chassis
-            for part in [upper_body, hood, trunk, windshield]:
-                try:
-                    mesh = mesh.boolean_union(part)
-                except:
-                    pass  # Skip if boolean fails
-        except:
-            # Fallback: combine simpler
-            mesh = chassis
-            try:
-                mesh = mesh.boolean_union(upper_body)
-            except:
-                pass
+        parts.append(windshield)
         
         # Add wheels (cylinders)
         wheel_radius = width * 0.15
@@ -155,12 +146,15 @@ def create_car_mesh_3d(length, width, height, stress_value=None):
             radius=wheel_radius,
             height=wheel_width
         )
+        parts.append(front_wheel_left)
+        
         front_wheel_right = pv.Cylinder(
             center=(length*0.25, width/2 + wheel_width/2, wheel_z),
             direction=(0, 1, 0),
             radius=wheel_radius,
             height=wheel_width
         )
+        parts.append(front_wheel_right)
         
         # Rear wheels
         rear_wheel_left = pv.Cylinder(
@@ -169,25 +163,38 @@ def create_car_mesh_3d(length, width, height, stress_value=None):
             radius=wheel_radius,
             height=wheel_width
         )
+        parts.append(rear_wheel_left)
+        
         rear_wheel_right = pv.Cylinder(
             center=(length*0.75, width/2 + wheel_width/2, wheel_z),
             direction=(0, 1, 0),
             radius=wheel_radius,
             height=wheel_width
         )
+        parts.append(rear_wheel_right)
         
-        # Add wheels to mesh
+        # Combine all parts using MultiBlock and merge
         try:
-            for wheel in [front_wheel_left, front_wheel_right, rear_wheel_left, rear_wheel_right]:
-                try:
-                    mesh = mesh.boolean_union(wheel)
-                except:
-                    pass
+            multi = pv.MultiBlock(parts)
+            mesh = multi.combine()
         except:
-            pass  # Wheels are optional
+            # Fallback: try merging sequentially
+            try:
+                mesh = parts[0]
+                for part in parts[1:]:
+                    try:
+                        mesh = mesh + part  # Use addition instead of boolean union
+                    except:
+                        pass
+            except:
+                # Ultimate fallback: just use chassis
+                mesh = chassis
         
-        # Smooth and triangulate
-        mesh = mesh.triangulate()
+        # Ensure mesh is triangulated
+        try:
+            mesh = mesh.triangulate()
+        except:
+            pass
         
         # Add stress field if provided
         if stress_value is not None:
@@ -311,13 +318,19 @@ def plotly_mesh_from_pyvista(mesh, stress_field=None):
         except:
             return create_simple_box_viz(mesh.bounds)
         
-        # Create mesh3d trace
-        if stress_field is not None and "stress" in mesh.point_data:
+        # Create mesh3d trace with stress field
+        colors = None
+        colorscale = 'Viridis'
+        if "stress" in mesh.point_data:
             colors = mesh.point_data["stress"]
-            colorscale = [[0, 'blue'], [0.5, 'yellow'], [1, 'red']]
-        else:
-            colors = None
-            colorscale = 'Viridis'
+            # Normalize colors for better visualization
+            if len(colors) > 0:
+                c_min, c_max = colors.min(), colors.max()
+                if c_max > c_min:
+                    colors = (colors - c_min) / (c_max - c_min)
+                colorscale = [[0, 'blue'], [0.5, 'yellow'], [1, 'red']]
+            else:
+                colors = None
         
         fig = go.Figure(data=[go.Mesh3d(
             x=vertices[:, 0],
@@ -817,15 +830,16 @@ def main():
                         st.markdown("Interactive 3D model showing predicted stress distribution:")
                         
                         try:
-                            # Clear any cached mesh to ensure we get the new enhanced version
-                            if hasattr(create_car_mesh_3d, '__wrapped__'):
-                                pass  # Already cleared
-                            
                             # Create enhanced car mesh with stress field
                             with st.spinner("Generating 3D car model..."):
                                 mesh = create_car_mesh_3d(length, width, height, prediction)
                                 
-                                # Convert to Plotly
+                                # Debug info (can remove later)
+                                debug_info = f"Mesh: {mesh.n_points if hasattr(mesh, 'n_points') else 'N/A'} points"
+                                if hasattr(mesh, 'point_data') and 'stress' in mesh.point_data:
+                                    debug_info += f", Stress range: {mesh.point_data['stress'].min():.0f}-{mesh.point_data['stress'].max():.0f} Pa"
+                                
+                                # Convert to Plotly with stress field
                                 fig = plotly_mesh_from_pyvista(mesh, stress_field=True)
                             
                             # Display interactive plot
