@@ -11,11 +11,11 @@ from sqlalchemy import create_engine
 
 # Try to import OpenAI, but make it optional
 try:
-    import openai
+    from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    openai = None
+    OpenAI = None
 
 DB_PATH = "sqlite:///data/metadata.db"
 
@@ -35,8 +35,7 @@ class DesignAssistant:
         self.client = None
         
         if OPENAI_AVAILABLE and self.api_key:
-            openai.api_key = self.api_key
-            self.client = openai
+            self.client = OpenAI(api_key=self.api_key)
         elif not OPENAI_AVAILABLE:
             print("⚠️  OpenAI package not installed. Install with: pip install openai")
         elif not self.api_key:
@@ -80,7 +79,7 @@ Return JSON with:
 }"""
         
         try:
-            response = self.client.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -198,7 +197,7 @@ Design Requirements:
 Create an execution plan to achieve these goals."""
         
         try:
-            response = self.client.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
