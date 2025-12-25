@@ -173,26 +173,74 @@ def create_car_mesh_3d(length, width, height, stress_value=None):
         )
         parts.append(rear_wheel_right)
         
-        # Combine all parts using MultiBlock and merge
+        # Manually combine all parts by concatenating vertices and faces
         try:
-            multi = pv.MultiBlock(parts)
-            mesh = multi.combine()
-        except:
-            # Fallback: try merging sequentially
-            try:
-                mesh = parts[0]
-                for part in parts[1:]:
-                    try:
-                        mesh = mesh + part  # Use addition instead of boolean union
-                    except:
-                        pass
-            except:
-                # Ultimate fallback: just use chassis
+            all_points = []
+            all_faces = []
+            point_offset = 0
+            
+            for part in parts:
+                try:
+                    # Ensure part is triangulated
+                    part_tri = part.triangulate() if hasattr(part, 'triangulate') else part
+                    
+                    # Get points and faces
+                    part_points = part_tri.points
+                    part_faces = part_tri.faces
+                    
+                    if len(part_points) == 0:
+                        continue
+                    
+                    # Add points
+                    all_points.append(part_points)
+                    
+                    # Adjust face indices and add faces
+                    if len(part_faces) > 0:
+                        # PyVista face format: [n, i1, i2, ..., in, n, i1, ...]
+                        i = 0
+                        adjusted_faces = []
+                        while i < len(part_faces):
+                            n_verts = int(part_faces[i])
+                            if n_verts >= 3 and i + 1 + n_verts <= len(part_faces):
+                                # Add face count
+                                adjusted_faces.append(n_verts)
+                                # Add vertex indices with offset
+                                for j in range(1, n_verts + 1):
+                                    adjusted_faces.append(int(part_faces[i + j]) + point_offset)
+                                i += n_verts + 1
+                            else:
+                                i += 1
+                        
+                        if len(adjusted_faces) > 0:
+                            all_faces.extend(adjusted_faces)
+                    
+                    # Update point offset after processing this part
+                    point_offset += len(part_points)
+                        
+                except Exception as part_err:
+                    # Skip this part if it fails
+                    continue
+            
+            # Create combined mesh
+            if len(all_points) > 0:
+                combined_points = np.vstack(all_points)
+                if len(all_faces) > 0:
+                    combined_faces = np.array(all_faces, dtype=np.int32)
+                    mesh = pv.PolyData(combined_points, combined_faces)
+                else:
+                    # If no faces, create from points
+                    mesh = pv.PolyData(combined_points)
+            else:
                 mesh = chassis
+                
+        except Exception as combine_err:
+            # Fallback: just use chassis
+            mesh = chassis
         
         # Ensure mesh is triangulated
         try:
-            mesh = mesh.triangulate()
+            if hasattr(mesh, 'triangulate'):
+                mesh = mesh.triangulate()
         except:
             pass
         
