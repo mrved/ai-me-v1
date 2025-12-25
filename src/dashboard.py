@@ -340,10 +340,19 @@ def plotly_mesh_from_pyvista(mesh, stress_field=None):
                 yaxis_title="Width (m)",
                 zaxis_title="Height (m)",
                 aspectmode='data',
-                camera=dict(eye=dict(x=1.5, y=1.5, z=1.5))
+                camera=dict(
+                    eye=dict(x=2.0, y=2.0, z=1.2),
+                    center=dict(x=0, y=0, z=0),
+                    up=dict(x=0, y=0, z=1)
+                ),
+                bgcolor='rgb(245, 245, 250)',
+                xaxis=dict(backgroundcolor='white', gridcolor='lightgray', showbackground=True),
+                yaxis=dict(backgroundcolor='white', gridcolor='lightgray', showbackground=True),
+                zaxis=dict(backgroundcolor='white', gridcolor='lightgray', showbackground=True)
             ),
-            height=600,
-            margin=dict(l=0, r=0, t=0, b=0)
+            height=700,
+            margin=dict(l=0, r=0, t=20, b=0),
+            paper_bgcolor='white'
         )
         
         return fig
