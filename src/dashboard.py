@@ -83,6 +83,51 @@ def load_model():
         st.code(traceback.format_exc())
         return None
 
+def _show_guidance(current_value, optimal_value, min_val, max_val, param_name):
+    """Show subtle guidance indicator for parameter adjustment"""
+    diff = current_value - optimal_value
+    diff_pct = abs(diff) / (max_val - min_val) * 100 if (max_val - min_val) > 0 else 0
+    
+    # Only show if significantly off (more than 2% of range)
+    if diff_pct < 2:
+        st.caption(f"✓ Optimal: {optimal_value:.2f}")
+    else:
+        # Calculate position on slider (0 to 100)
+        current_pos = ((current_value - min_val) / (max_val - min_val) * 100) if (max_val - min_val) > 0 else 50
+        optimal_pos = ((optimal_value - min_val) / (max_val - min_val) * 100) if (max_val - min_val) > 0 else 50
+        
+        # Determine direction
+        if diff > 0:
+            direction = "↓ Decrease"
+            arrow = "↓"
+        else:
+            direction = "↑ Increase"
+            arrow = "↑"
+        
+        # Create a simple progress bar visualization
+        st.caption(f"{arrow} {direction} to {optimal_value:.2f}")
+        
+        # Show a subtle progress bar
+        col_prog1, col_prog2, col_prog3 = st.columns([1, 8, 1])
+        with col_prog1:
+            st.write("")  # Spacer
+        with col_prog2:
+            # Create a visual slider representation
+            bar_width = 100
+            current_bar_pos = int((current_value - min_val) / (max_val - min_val) * bar_width) if (max_val - min_val) > 0 else 50
+            optimal_bar_pos = int((optimal_value - min_val) / (max_val - min_val) * bar_width) if (max_val - min_val) > 0 else 50
+            
+            # Create HTML-like visualization using markdown
+            st.markdown(
+                f'<div style="position: relative; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 2px 0;">'
+                f'<div style="position: absolute; left: {optimal_bar_pos}%; width: 2px; height: 100%; background: #4CAF50; border-radius: 1px;"></div>'
+                f'<div style="position: absolute; left: {current_bar_pos}%; width: 2px; height: 100%; background: #2196F3; border-radius: 1px;"></div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+        with col_prog3:
+            st.write("")  # Spacer
+
 def create_car_mesh_3d(length, width, height, stress_value=None):
     """Create a realistic 3D car mesh for visualization"""
     try:
@@ -708,85 +753,66 @@ def main():
                 st.markdown("**Car Dimensions:**")
                 
                 # Length with suggestion
-                col_len1, col_len2 = st.columns([3, 1])
-                with col_len1:
-                    length = st.number_input(
-                        "Length (m)", 
-                        LENGTH_MIN, LENGTH_MAX, float(suggested_length),
-                        help="Overall length of the car from front to back",
-                        key="length_input"
-                    )
-                with col_len2:
-                    st.metric("💡 Optimal", f"{suggested_length:.2f}m", 
-                             delta=f"{abs(length - suggested_length):.2f}m off" if abs(length - suggested_length) > 0.1 else "✓")
+                length = st.number_input(
+                    "Length (m)", 
+                    LENGTH_MIN, LENGTH_MAX, float(suggested_length),
+                    help="Overall length of the car from front to back",
+                    key="length_input"
+                )
+                # Subtle guidance indicator
+                _show_guidance(length, suggested_length, LENGTH_MIN, LENGTH_MAX, "Length")
                 
                 # Width with suggestion
-                col_wid1, col_wid2 = st.columns([3, 1])
-                with col_wid1:
-                    width = st.number_input(
-                        "Width (m)", 
-                        WIDTH_MIN, WIDTH_MAX, float(suggested_width),
-                        help="Width of the car (track width)",
-                        key="width_input"
-                    )
-                with col_wid2:
-                    st.metric("💡 Optimal", f"{suggested_width:.2f}m",
-                             delta=f"{abs(width - suggested_width):.2f}m off" if abs(width - suggested_width) > 0.05 else "✓")
+                width = st.number_input(
+                    "Width (m)", 
+                    WIDTH_MIN, WIDTH_MAX, float(suggested_width),
+                    help="Width of the car (track width)",
+                    key="width_input"
+                )
+                _show_guidance(width, suggested_width, WIDTH_MIN, WIDTH_MAX, "Width")
                 
                 # Height with suggestion
-                col_hei1, col_hei2 = st.columns([3, 1])
-                with col_hei1:
-                    height = st.number_input(
-                        "Height (m)", 
-                        HEIGHT_MIN, HEIGHT_MAX, float(suggested_height),
-                        help="Overall height of the car",
-                        key="height_input"
-                    )
-                with col_hei2:
-                    st.metric("💡 Optimal", f"{suggested_height:.2f}m",
-                             delta=f"{abs(height - suggested_height):.2f}m off" if abs(height - suggested_height) > 0.05 else "✓")
+                height = st.number_input(
+                    "Height (m)", 
+                    HEIGHT_MIN, HEIGHT_MAX, float(suggested_height),
+                    help="Overall height of the car",
+                    key="height_input"
+                )
+                _show_guidance(height, suggested_height, HEIGHT_MIN, HEIGHT_MAX, "Height")
                 
                 if has_advanced_params:
                     st.markdown("**Advanced Parameters:**")
                     
                     # Drag coefficient with suggestion
-                    col_cd1, col_cd2 = st.columns([3, 1])
-                    with col_cd1:
-                        drag_coefficient = st.number_input(
-                            "Drag Coefficient (Cd)", 
-                            CD_MIN, CD_MAX, float(suggested_cd),
-                            help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)",
-                            key="cd_input"
-                        )
-                    with col_cd2:
-                        st.metric("💡 Optimal", f"{suggested_cd:.3f}",
-                                 delta="Lower = Better" if drag_coefficient > suggested_cd else "✓")
+                    drag_coefficient = st.number_input(
+                        "Drag Coefficient (Cd)", 
+                        CD_MIN, CD_MAX, float(suggested_cd),
+                        help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)",
+                        key="cd_input"
+                    )
+                    # For drag coefficient, lower is better
+                    if drag_coefficient > suggested_cd:
+                        st.caption(f"↓ Decrease to {suggested_cd:.3f} (lower is better)")
+                    else:
+                        st.caption(f"✓ Optimal: {suggested_cd:.3f}")
                     
                     # Wheelbase with suggestion
-                    col_wb1, col_wb2 = st.columns([3, 1])
-                    with col_wb1:
-                        wheelbase = st.number_input(
-                            "Wheelbase (m)", 
-                            WHEELBASE_MIN, WHEELBASE_MAX, float(suggested_wheelbase),
-                            help="Distance between front and rear axles",
-                            key="wheelbase_input"
-                        )
-                    with col_wb2:
-                        st.metric("💡 Optimal", f"{suggested_wheelbase:.2f}m",
-                                 delta=f"{abs(wheelbase - suggested_wheelbase):.2f}m off" if abs(wheelbase - suggested_wheelbase) > 0.1 else "✓")
+                    wheelbase = st.number_input(
+                        "Wheelbase (m)", 
+                        WHEELBASE_MIN, WHEELBASE_MAX, float(suggested_wheelbase),
+                        help="Distance between front and rear axles",
+                        key="wheelbase_input"
+                    )
+                    _show_guidance(wheelbase, suggested_wheelbase, WHEELBASE_MIN, WHEELBASE_MAX, "Wheelbase")
                     
                     # Roof angle with suggestion
-                    col_ra1, col_ra2 = st.columns([3, 1])
-                    with col_ra1:
-                        roof_angle = st.number_input(
-                            "Roof Angle (degrees)", 
-                            ROOF_ANGLE_MIN, ROOF_ANGLE_MAX, float(suggested_roof_angle),
-                            help="Greenhouse/roof angle",
-                            key="roof_angle_input"
-                        )
-                    with col_ra2:
-                        st.metric("💡 Optimal", f"{suggested_roof_angle:.1f}°",
-                                 delta=f"{abs(roof_angle - suggested_roof_angle):.1f}° off" if abs(roof_angle - suggested_roof_angle) > 5 else "✓")
+                    roof_angle = st.number_input(
+                        "Roof Angle (degrees)", 
+                        ROOF_ANGLE_MIN, ROOF_ANGLE_MAX, float(suggested_roof_angle),
+                        help="Greenhouse/roof angle",
+                        key="roof_angle_input"
+                    )
+                    _show_guidance(roof_angle, suggested_roof_angle, ROOF_ANGLE_MIN, ROOF_ANGLE_MAX, "Roof Angle")
                 
                 st.markdown("**Loading Conditions:**")
                 if has_advanced_params:
