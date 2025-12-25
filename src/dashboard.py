@@ -330,16 +330,22 @@ def main():
         # Explanation
         with st.expander("📖 About the Data Lakehouse", expanded=False):
             st.markdown("""
-            This data lakehouse contains **car design simulation results** from our virtual testing pipeline.
+            This data lakehouse contains **real car design data** from DrivAerNet++ dataset with CFD simulations.
             
             **What's stored:**
-            - **Design Parameters**: Length, width, height, and aerodynamic load for each car design
+            - **Design Parameters**: Length, width, height, drag coefficient, and aerodynamic load
             - **Performance Metrics**: Maximum stress and deflection from structural analysis
-            - **Simulation Results**: 50+ car designs with physics-based calculations
+            - **Real Data**: 2,000+ car designs with actual CFD drag coefficients
+            - **Additional Parameters**: Wheelbase, roof angle, windshield angle
+            
+            **Data Source:**
+            - DrivAerNet++: 8,000+ real car designs with high-fidelity CFD simulations
+            - Real drag coefficients from computational fluid dynamics
+            - Multiple car configurations (fastback, notchback, estateback)
             
             **Use this to:**
             - Explore relationships between design parameters and performance
-            - Identify optimal design ranges
+            - Identify optimal design ranges using real aerodynamic data
             - Understand stress patterns across different car geometries
             """)
         
@@ -470,9 +476,11 @@ def main():
             
             **How it works:**
             1. Enter car dimensions (length, width, height) and expected aerodynamic load
-            2. AI model predicts maximum stress based on 50+ trained car designs
+            2. AI model predicts maximum stress based on 2,000+ real car designs with CFD data
             3. 3D visualization shows stress distribution across the car body
             4. Use results to optimize design before manufacturing
+            
+            **Data Source:** Trained on DrivAerNet++ dataset with real drag coefficients from CFD simulations
             """)
         
         model = load_model()
