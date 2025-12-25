@@ -618,16 +618,26 @@ def main():
                 has_advanced_params = not df_check.empty and 'drag_coefficient' in df_check.columns
                 
                 # Calculate optimal values from data (lowest stress designs)
+                # Define min/max ranges for each parameter
+                LENGTH_MIN, LENGTH_MAX = 3.5, 5.5
+                WIDTH_MIN, WIDTH_MAX = 1.6, 2.0
+                HEIGHT_MIN, HEIGHT_MAX = 1.4, 1.8
+                CD_MIN, CD_MAX = 0.20, 0.35
+                WHEELBASE_MIN, WHEELBASE_MAX = 2.1, 3.3  # Adjusted to match actual data range
+                ROOF_ANGLE_MIN, ROOF_ANGLE_MAX = -30.0, 30.0
+                
                 if not df_check.empty:
                     # Find designs with lowest stress (top 10%)
                     optimal_designs = df_check.nsmallest(int(len(df_check) * 0.1), 'max_stress')
-                    suggested_length = optimal_designs['length'].mean()
-                    suggested_width = optimal_designs['width'].mean()
-                    suggested_height = optimal_designs['height'].mean()
+                    suggested_length = max(LENGTH_MIN, min(LENGTH_MAX, optimal_designs['length'].mean()))
+                    suggested_width = max(WIDTH_MIN, min(WIDTH_MAX, optimal_designs['width'].mean()))
+                    suggested_height = max(HEIGHT_MIN, min(HEIGHT_MAX, optimal_designs['height'].mean()))
                     if has_advanced_params:
-                        suggested_cd = optimal_designs['drag_coefficient'].mean()
-                        suggested_wheelbase = optimal_designs['wheelbase'].mean() if 'wheelbase' in optimal_designs.columns else length * 0.6
-                        suggested_roof_angle = optimal_designs['roof_angle'].mean() if 'roof_angle' in optimal_designs.columns else 0.0
+                        suggested_cd = max(CD_MIN, min(CD_MAX, optimal_designs['drag_coefficient'].mean()))
+                        suggested_wheelbase = max(WHEELBASE_MIN, min(WHEELBASE_MAX, 
+                            optimal_designs['wheelbase'].mean() if 'wheelbase' in optimal_designs.columns else 2.8))
+                        suggested_roof_angle = max(ROOF_ANGLE_MIN, min(ROOF_ANGLE_MAX,
+                            optimal_designs['roof_angle'].mean() if 'roof_angle' in optimal_designs.columns else 0.0))
                 else:
                     suggested_length, suggested_width, suggested_height = 4.5, 1.8, 1.6
                     suggested_cd, suggested_wheelbase, suggested_roof_angle = 0.26, 2.8, 0.0
@@ -639,7 +649,7 @@ def main():
                 with col_len1:
                     length = st.number_input(
                         "Length (m)", 
-                        3.5, 5.5, float(suggested_length),
+                        LENGTH_MIN, LENGTH_MAX, float(suggested_length),
                         help="Overall length of the car from front to back",
                         key="length_input"
                     )
@@ -652,7 +662,7 @@ def main():
                 with col_wid1:
                     width = st.number_input(
                         "Width (m)", 
-                        1.6, 2.0, float(suggested_width),
+                        WIDTH_MIN, WIDTH_MAX, float(suggested_width),
                         help="Width of the car (track width)",
                         key="width_input"
                     )
@@ -665,7 +675,7 @@ def main():
                 with col_hei1:
                     height = st.number_input(
                         "Height (m)", 
-                        1.4, 1.8, float(suggested_height),
+                        HEIGHT_MIN, HEIGHT_MAX, float(suggested_height),
                         help="Overall height of the car",
                         key="height_input"
                     )
@@ -681,7 +691,7 @@ def main():
                     with col_cd1:
                         drag_coefficient = st.number_input(
                             "Drag Coefficient (Cd)", 
-                            0.20, 0.35, float(suggested_cd),
+                            CD_MIN, CD_MAX, float(suggested_cd),
                             help="Aerodynamic drag coefficient (lower is better, typical: 0.25-0.30)",
                             key="cd_input"
                         )
@@ -694,7 +704,7 @@ def main():
                     with col_wb1:
                         wheelbase = st.number_input(
                             "Wheelbase (m)", 
-                            2.5, 3.2, float(suggested_wheelbase),
+                            WHEELBASE_MIN, WHEELBASE_MAX, float(suggested_wheelbase),
                             help="Distance between front and rear axles",
                             key="wheelbase_input"
                         )
@@ -707,7 +717,7 @@ def main():
                     with col_ra1:
                         roof_angle = st.number_input(
                             "Roof Angle (degrees)", 
-                            -30.0, 30.0, float(suggested_roof_angle),
+                            ROOF_ANGLE_MIN, ROOF_ANGLE_MAX, float(suggested_roof_angle),
                             help="Greenhouse/roof angle",
                             key="roof_angle_input"
                         )
